@@ -1,14 +1,12 @@
-from fastapi import APIRouter,FastAPI,Depends
+from fastapi import APIRouter,Depends
 from ..models.model import Users_
 from tortoise.contrib.pydantic import pydantic_model_creator
-from ..pydantic_model.schemaModel import User_s,savepassword,Token,TokenData
+from ..pydantic_model.schemaModel import User_s,savepassword
 from fastapi.requests import Request
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
-from ..security.auth import create_access_token,authenticate_user
-from datetime import timedelta
 from ..api.user_route import *
+from ..middlewares.midddlewares import login_middle
+
 
 import os
 from dotenv import load_dotenv
@@ -26,11 +24,12 @@ routes = APIRouter()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+REFRESH_TOKEN_EXPIRE_DAY=int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS"))
 
 
 
-#
+
 
 
      
@@ -38,16 +37,18 @@ ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 
 @routes.get("/")
-async def get_users():
-    allusers=await Users_.all()
-    for user in allusers:
-         orderd=[{
+async def get_users(request:Request):
+        allusers=await Users_.all()
+        for user in allusers:
+             orderd=[{
              "id": user.id,
             "name": user.name,
             "username": user.username,
             "password": user.password
-        }]
-    return allusers
+         }]
+        print(request.headers)
+        
+        return allusers
 @routes.post("/addusers/")
 async def create_user(users:User_s):
     try:
@@ -80,18 +81,55 @@ async def delete(id:int):
 
 
 @routes.post("/login")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> Token:
-    user = await authenticate_user(form_data.username, form_data.password)
+async def login(user:Annotated[dict,Depends(login_middle)]):
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return Token(access_token=access_token, token_type="bearer")
+         return user
+         
+
+    return user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# async def login_for_access_token(
+#     form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+# ) -> Token:
+#     user = await authenticate_user(form_data.username, form_data.password)
+#     print(ACCESS_TOKEN_EXPIRE_MINUTES)
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Incorrect username or password",
+#             headers={"WWW-Authenticate": "Bearer"},
+#         )
+#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     access_token = create_access_token(
+#         data={"sub": user.username}, expires_delta=access_token_expires
+#     )
+
+  
+    
+#     return {"access_token": access_token,  "token_type": "bearer"}
+    
+
+
+
+# @routes.get("/refresh")
+# async def refresh_token(token:str=Depends(refresh_token)):

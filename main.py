@@ -1,9 +1,8 @@
-from fastapi import FastAPI,Request,HTTPException
+from fastapi import FastAPI
 from app.api.apis import router as main_router
 from tortoise.contrib.fastapi import register_tortoise
 from app.Database.connectToDatabase import connectTodatbase,closeDatabase
 from contextlib import asynccontextmanager
-# from app.middlewares.midddlewares import checkuser
 import time
 
 
@@ -17,13 +16,7 @@ async def life_span(app: FastAPI):
 
 
 
-async def checkdata(request:Request):
-        data=True
 
-        if request:
-                return "True"
-        else:
-                return "False"
 
         
         
@@ -32,7 +25,8 @@ async def checkdata(request:Request):
 
 app = FastAPI(lifespan=life_span)
 
-# app.add_middleware(loginMiddleware)
+
+
 
 
 
