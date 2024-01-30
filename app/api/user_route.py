@@ -1,12 +1,40 @@
-from fastapi import APIRouter
+from fastapi import APIRouter,FastAPI,Depends
 from ..models.model import Users_
 from tortoise.contrib.pydantic import pydantic_model_creator
-from ..pydantic_model.schemaModel import User_s,savepassword
+from ..pydantic_model.schemaModel import User_s,savepassword,Token,TokenData
+from fastapi.requests import Request
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from typing import Annotated
+from ..security.auth import create_access_token,authenticate_user
+from datetime import timedelta
+from ..api.user_route import *
+
+import os
+from dotenv import load_dotenv
+
+
+
+load_dotenv()
 
 
 pydanticuser=pydantic_model_creator(Users_)
 
 routes = APIRouter()
+
+
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+
+
+
+#
+
+
+     
+
 
 
 @routes.get("/")
@@ -51,15 +79,19 @@ async def delete(id:int):
     return {"message":"user deleted"}
 
 
-
-@routes.post("/login/")
-async def login(users:User_s):
-    user=await Users_.get(username=users.username)
-    if user:
-        if await user.check_pass(users.password):
-            return {"message":"login successfull"}
-        else:
-            return {"message":"password is wrong"}
-    else:
-        return {"message":"user not found"}
-
+@routes.post("/login")
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+) -> Token:
+    user = await authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return Token(access_token=access_token, token_type="bearer")

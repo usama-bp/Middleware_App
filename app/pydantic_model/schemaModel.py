@@ -20,3 +20,10 @@ class customer_s(BaseModel):
     shop_name: str
     add_by_id: int
     
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
